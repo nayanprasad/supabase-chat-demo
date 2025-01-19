@@ -25,7 +25,7 @@ export default function ChatInput() {
 					id: user?.id,
 					avatar_url: user?.user_metadata.avatar_url,
 					created_at: new Date().toISOString(),
-					display_name: user?.user_metadata.user_name,
+					display_name: user?.user_metadata.name,
 				},
 			};
 			addMessage(newMessage as Imessage);
