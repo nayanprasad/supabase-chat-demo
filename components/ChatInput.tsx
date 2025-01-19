@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Input } from "./ui/input";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { toast } from "sonner";
@@ -9,9 +9,35 @@ import { Imessage, useMessage } from "@/lib/store/messages";
 
 export default function ChatInput() {
 	const user = useUser((state) => state.user);
+	const inputRef = useRef<HTMLInputElement>(null)
 	const addMessage = useMessage((state) => state.addMessage);
 	const setOptimisticIds = useMessage((state) => state.setOptimisticIds);
 	const supabase = supabaseBrowser();
+	const [isTyping, setIsTyping] = useState(false);
+
+	useEffect(() => {
+		if (!isTyping && inputRef.current) {
+			inputRef.current.focus();
+		}
+	}, [isTyping]);
+
+	const debouncedSendMessage = useCallback(
+		(() => {
+			let timeoutId: NodeJS.Timeout;
+			return (text: string) => {
+				if (isTyping) {
+					clearTimeout(timeoutId);
+				}
+				setIsTyping(true);
+				timeoutId = setTimeout(async () => {
+					await handleSendMessage(text);
+					setIsTyping(false);
+				}, 1000);
+			};
+		})(),
+		[isTyping]
+	);
+
 	const handleSendMessage = async (text: string) => {
 		if (text.trim()) {
 			const id = uuidv4();
@@ -44,13 +70,15 @@ export default function ChatInput() {
 	return (
 		<div className="p-5">
 			<Input
-				placeholder="send message"
+			ref={inputRef}
+				placeholder={isTyping ? "Waiting to send..." : "send message"}
 				onKeyDown={(e) => {
 					if (e.key === "Enter") {
-						handleSendMessage(e.currentTarget.value);
+						debouncedSendMessage(e.currentTarget.value);
 						e.currentTarget.value = "";
 					}
 				}}
+				disabled={isTyping}
 			/>
 		</div>
 	);
